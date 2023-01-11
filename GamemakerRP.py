@@ -53,7 +53,7 @@ def getUserSettings():
             "enableNotes" : True,
             "enablePaths" : True,
             "enableShaders" : True,
-            "enableTielines" : True,
+            "enableTimelines" : True,
         }
         setUserSettings(data)
         return data
