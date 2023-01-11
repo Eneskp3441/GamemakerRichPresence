@@ -29,7 +29,8 @@ if not os.path.exists(settingsSaveFolder):
     os.makedirs(settingsSaveFolder)
 userSettingsPath = settingsSaveFolder+"\\userSettings.json"
 
-
+programPath = current_dir = os.path.dirname(os.path.abspath(__file__))
+programIconPath = os.path.join(current_dir, "icon.png")
 
 def getUserSettings():
     if os.path.exists(userSettingsPath):
@@ -146,7 +147,7 @@ def checkCheck(item):
 
     return userSettings[name]
 
-icon = strayicon('Gamemaker - Rich Presence', icon=PIL.Image.open("icon.png"))
+icon = strayicon('Gamemaker - Rich Presence', icon=PIL.Image.open(programIconPath))
 
 menu_items = []
 
