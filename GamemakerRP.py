@@ -203,7 +203,7 @@ while programActive:
         if projectName != "Start Page":
             with open(recentProjects, 'r') as f:
                 string = f.read()
-                for project in string.split():
+                for project in string.split("\n"):
                     if project.rsplit("\\")[-2] == projectName:
                         projectFolder = "\\".join(project.rsplit("\\")[:-1])
                         break
