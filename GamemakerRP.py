@@ -130,7 +130,7 @@ for file in os.listdir(userPath):
         break
 
 def on_clicked(icon, item):
-    global programActive,icon_thread
+    global programActive,icon_thread,userSettings
     name = "".join(str(item).split())
     name = name[0].lower() + name[1:]
 
@@ -139,6 +139,9 @@ def on_clicked(icon, item):
         programActive = False
         if not icon_thread.is_alive():
             icon_thread.join()
+    elif str(item) == "Reset":
+        os.remove(userSettingsPath)
+        userSettings = getUserSettings()
     else:
         userSettings[name] = not userSettings[name]
         setUserSettings(userSettings)
@@ -162,6 +165,8 @@ for i in userSettings.keys():
         itemName = i.replace("enable", "Enable ").title()
         item = MenuItem(itemName, on_clicked, checked=checkCheck)
         menu_items.append(item)
+
+menu_items.append(MenuItem( 'Reset', on_clicked))
 
 settingsMenu = Menu(*menu_items)
 
@@ -210,7 +215,7 @@ while programActive:
                         break
             lastEditPath = get_latest_file(projectFolder)
             if lastEditPath != False:
-                editingType =  currentName
+                editingType =  lastEditPath.rsplit("\\")[-2]
                 
                 with open(projectFolder+"\\"+projectName+".yyp", 'r') as f:
                     string = f.read()
@@ -224,18 +229,18 @@ while programActive:
                     if i.startswith("enable"):
                         if not userSettings[i] and editingType == i.replace('enable', '').lower():
                             isVisible = False
-
                 if ( not isVisible ):
                     rpcData["state"] = "Editing Project"
                     if userSettings['showProjectName']: rpcData['details'] = projectName
                     rpcData["large_image"] = "gamemaker"
+                    rpcData["large_text"] = IDEVersion
                     rpcData["start"] = currentTimeStamp
                 else:
                     rpcData["state"] = "Editing " + ( lastEditPath.rsplit("\\")[-1] if userSettings['showEditingName'] else editingType[:-1])
                     if userSettings['showProjectName']: rpcData['details'] = projectName
                     rpcData["large_image"] = editingType
                     rpcData["small_image"] = "gamemaker"
-                    rpcData["large_text"] = editingType
+                    rpcData["large_text"] = editingType[:-1]
                     rpcData["small_text"] = IDEVersion
                     rpcData["start"] = currentTimeStamp
         else:
