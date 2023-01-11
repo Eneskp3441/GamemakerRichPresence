@@ -204,12 +204,13 @@ while programActive:
             with open(recentProjects, 'r') as f:
                 string = f.read()
                 for project in string.split("\n"):
-                    if project.rsplit("\\")[-2] == projectName:
+                    currentName = project.rsplit("\\")[-1][:-4]
+                    if currentName == projectName:
                         projectFolder = "\\".join(project.rsplit("\\")[:-1])
                         break
             lastEditPath = get_latest_file(projectFolder)
             if lastEditPath != False:
-                editingType =  lastEditPath.rsplit("\\")[-2]
+                editingType =  currentName
                 
                 with open(projectFolder+"\\"+projectName+".yyp", 'r') as f:
                     string = f.read()
