@@ -20,7 +20,7 @@ from pystray import Icon as strayicon, Menu, MenuItem
 
 # Discord Presence
 client_id = "1062461019458379937"
-RPC = Presence(client_id)
+
 programActive = True
 rpcData = None
 lastEditing = None
@@ -193,6 +193,15 @@ icon_thread.start()
 time.sleep(1)
 
 icon.notify("Gamemaker - Rich Presence Started!", title="Gamemaker - Rich Presence By Eneskp#3441")
+
+while 1:
+    try: 
+        RPC = Presence(client_id)
+        print("Discord Bulundu")
+        break
+    except: 
+        print("Discord Çalışmıyor")
+        time.sleep(3)
 
 
 RPC.connect()
