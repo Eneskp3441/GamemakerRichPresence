@@ -73,7 +73,6 @@ userSettings = getUserSettings()
 
 def get_latest_file(folder):
     all_files = []
-    print("Folder"+folder)
     for folder_path in folder_paths:
         if os.path.exists(folder + "\\" + folder_path):
             files = glob.glob(folder + "\\" + folder_path + '\\*')
@@ -197,11 +196,8 @@ icon.notify("Gamemaker - Rich Presence Started!", title="Gamemaker - Rich Presen
 while 1:
     try: 
         RPC = Presence(client_id)
-        print("Discord Bulundu")
         break
-    except: 
-        print("Discord Çalışmıyor")
-        time.sleep(3)
+    except: time.sleep(3)
 
 
 RPC.connect()
