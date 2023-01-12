@@ -90,8 +90,9 @@ def getPriorityWindow(gmW=0):
     global currentTimeStamp,userSettings,lastEditing
     app_list = None
     try:
-        app_list = findwindows.find_windows(title_re=".* - GameMaker")
-    except:
+        app_list = findwindows.find_windows(title_re=".* - GameMaker", class_name = "SDL_app")
+    except Exception as e:
+        print("findwindows error: ", e)
         return gmW
     
     if app_list != None:
@@ -104,7 +105,10 @@ def getPriorityWindow(gmW=0):
                     currentTimeStamp = datetime.timestamp(datetime.now())
                     lastEditing = app
             elif lastEditing != None:
-                gmApp = Application().connect(handle=lastEditing)
+                try:
+                    gmApp = Application().connect(handle=lastEditing)
+                except Exception as e:
+                    lastEditing = None
         if gmApp != None:
             return gmApp.window()
         else:
@@ -175,9 +179,6 @@ mainMenu = Menu(
     )
 
 icon.menu = mainMenu
-
-# icon.notify("Active!")
-
 def runStray():
     global icon
     icon.run()
@@ -196,15 +197,19 @@ icon.notify("Gamemaker - Rich Presence Started!", title="Gamemaker - Rich Presen
 while 1:
     try: 
         RPC = Presence(client_id)
+        print("Discord Bulundu")
         break
-    except: time.sleep(3)
+    except: 
+        time.sleep(3)
+        print("Discord Bulunamadı")
 
 
 RPC.connect()
 
 while programActive:
-    try: gmWindow = getPriorityWindow(gmWindow)
-    except Exception as e: print("Error: ",e)
+    try:    
+        gmWindow = getPriorityWindow(gmWindow)
+    except Exception as e: print("Error: ",repr(e), e)
     if (gmWindow != False):
         projectName = gmWindow.texts()[0].rsplit("- GameMaker")[0].strip()
         projectFolder = ""
