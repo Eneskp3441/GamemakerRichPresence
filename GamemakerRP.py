@@ -3,13 +3,6 @@
 
 
 """
-
-
-
-
-
-from pywinauto.application import Application,findwindows
-from pywinauto.controls.win32_controls import hwndwrapper
 import psutil, os, json, time, glob
 from pypresence import Presence
 from datetime import datetime
@@ -63,7 +56,7 @@ def setUserSettings(data):
         return json.dump(data, f)
 
 
-currentTimeStamp = 1
+currentTimeStamp = -1
 folder_paths = ['objects', 'rooms', 'scripts', 'sounds', 'sprites', 'tilesets', 'animcurves', 'fonts', 'sequences', 'extensions', 'notes', 'paths', 'shaders', 'timelines']
 userSettings = getUserSettings()
 
@@ -86,38 +79,8 @@ def get_latest_file(folder):
     else:
         return False
 
-def getPriorityWindow(gmW=0):
-    global currentTimeStamp,userSettings,lastEditing
-    app_list = None
-    try:
-        app_list = findwindows.find_windows(title_re=".* - GameMaker", class_name = "SDL_app")
-    except Exception as e:
-        print("findwindows error: ", e)
-        return gmW
-    
-    if app_list != None:
-        gmApp = None
-        for app in app_list:
-            window = hwndwrapper.HwndWrapper(app)
-            if (gmApp == None and lastEditing == None) or window.has_focus():
-                gmApp = Application().connect(handle=app)
-                if lastEditing != app:
-                    currentTimeStamp = datetime.timestamp(datetime.now())
-                    lastEditing = app
-            elif lastEditing != None:
-                try:
-                    gmApp = Application().connect(handle=lastEditing)
-                except Exception as e:
-                    lastEditing = None
-        if gmApp != None:
-            return gmApp.window()
-        else:
-            return False
-
-
 IDEVersion   = ""
 
-# gamemakerPath = psutil.Process(gmWindow.process_id()).exe()
 userPath = os.path.expandvars(r'%AppData%\GameMakerStudio2')
 userName = ""
 
@@ -184,7 +147,6 @@ def runStray():
     icon.run()
 
 
-gmWindow = getPriorityWindow()
 
 icon_thread = threading.Thread(target=runStray)
 icon_thread.daemon = True
@@ -197,70 +159,70 @@ icon.notify("Gamemaker - Rich Presence Started!", title="Gamemaker - Rich Presen
 while 1:
     try: 
         RPC = Presence(client_id)
-        print("Discord Bulundu")
+        print("Discord Found")
         break
     except: 
         time.sleep(3)
-        print("Discord Bulunamadı")
+        print("Discord Not Found")
 
 
 RPC.connect()
-
+projectName = ""
+lastProjectName = ""
 while programActive:
-    try:    
-        gmWindow = getPriorityWindow(gmWindow)
-    except Exception as e: print("Error: ",repr(e), e)
-    if (gmWindow != False):
-        projectName = gmWindow.texts()[0].rsplit("- GameMaker")[0].strip()
+    try:
+        gamemakerIsRunning = "GameMaker.exe" in (p.name() for p in psutil.process_iter())
+    except:
+        gamemakerIsRunning = False
+    if gamemakerIsRunning:
         projectFolder = ""
         rpcData = {"state" : ""}
         lastEditPath = ""
-        if projectName != "Start Page":
-            with open(recentProjects, 'r') as f:
-                string = f.read()
-                for project in string.split("\n"):
-                    currentName = project.rsplit("\\")[-1][:-4]
-                    if currentName == projectName:
-                        projectFolder = "\\".join(project.rsplit("\\")[:-1])
-                        break
-            lastEditPath = get_latest_file(projectFolder)
-            if lastEditPath != False:
-                editingType =  lastEditPath.rsplit("\\")[-2]
-                
-                with open(projectFolder+"\\"+projectName+".yyp", 'r') as f:
-                    string = f.read()
-                    string = string[string.find("\"IDEVersion\": \"")+15:]
-                    string = string[:string.find('",')]
-                    IDEVersion = string
+        with open(recentProjects, 'r') as f:
+            string = f.read()
 
-                isVisible = True
-                
-                for i in userSettings.keys():
-                    if i.startswith("enable"):
-                        if not userSettings[i] and editingType == i.replace('enable', '').lower():
-                            isVisible = False
-                if ( not isVisible ):
-                    rpcData["state"] = "Editing Project"
-                    if userSettings['showProjectName']: rpcData['details'] = projectName
-                    rpcData["large_image"] = "gamemaker"
-                    rpcData["large_text"] = IDEVersion
-                    rpcData["start"] = currentTimeStamp
-                else:
-                    rpcData["state"] = "Editing " + ( lastEditPath.rsplit("\\")[-1] if userSettings['showEditingName'] else editingType[:-1])
-                    if userSettings['showProjectName']: rpcData['details'] = projectName
-                    rpcData["large_image"] = editingType
-                    rpcData["small_image"] = "gamemaker"
-                    rpcData["large_text"] = editingType[:-1]
-                    rpcData["small_text"] = IDEVersion
-                    rpcData["start"] = currentTimeStamp
-        else:
-            rpcData["state"] = "Selecting Project.."
-            rpcData["details"] = "Start Page"
-            rpcData["large_image"] = "gamemaker"
+            project = string.split("\n")[0]
+            projectFolder = "\\".join(project.rsplit("\\")[:-1])
+            projectName = project.rsplit("\\")[-1][:-4]
+
+            if projectName != lastProjectName:
+                currentTimeStamp =  time.time()
+                lastProjectName = projectName
+
+        lastEditPath = get_latest_file(projectFolder)
+        if lastEditPath != False:
+            editingType =  lastEditPath.rsplit("\\")[-2]
+            with open(projectFolder+"\\"+projectName+".yyp", 'r') as f:
+                string = f.read()
+                string = string[string.find("\"IDEVersion\": \"")+15:]
+                string = string[:string.find('",')]
+                IDEVersion = string
+
+            isVisible = True
+            
+            for i in userSettings.keys():
+                if i.startswith("enable"):
+                    if not userSettings[i] and editingType == i.replace('enable', '').lower():
+                        isVisible = False
+            if ( not isVisible ):
+                rpcData["state"] = "Editing Project"
+                if userSettings['showProjectName']: rpcData['details'] = projectName
+                rpcData["large_image"] = "gamemaker"
+                rpcData["large_text"] = IDEVersion
+                if currentTimeStamp != -1: rpcData["start"] = currentTimeStamp
+            else:
+                rpcData["state"] = "Editing " + ( lastEditPath.rsplit("\\")[-1] if userSettings['showEditingName'] else editingType[:-1])
+                if userSettings['showProjectName']: rpcData['details'] = projectName
+                rpcData["large_image"] = editingType
+                rpcData["small_image"] = "gamemaker"
+                rpcData["large_text"] = editingType[:-1]
+                rpcData["small_text"] = IDEVersion
+                if currentTimeStamp != -1: rpcData["start"] = currentTimeStamp
         try:RPC.update(**rpcData)
         except: pass
-
     else:
+        lastProjectName = ""
+        currentTimeStamp = -1
         try:RPC.clear()
         except: pass
     
