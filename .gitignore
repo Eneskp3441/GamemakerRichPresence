@@ -153,3 +153,4 @@ cython_debug/
 
 .history/
 bilgi.txt
+OnlyTest/
