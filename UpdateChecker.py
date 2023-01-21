@@ -1,9 +1,11 @@
 import requests, sys, psutil, time, os,subprocess, json
 from datetime import datetime
+from dotenv import load_dotenv
 
 url = 'https://api.github.com/repos/Eneskp3441/GamemakerRichPresence/releases'
+GITHUB_TOKEN = os.getenv("TOKEN")
 headers = {
-    'Authorization': 'Token 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',
+    'Authorization': f"Token {GITHUB_TOKEN}",
     'Accept': 'application/vnd.github+json'
 }
 applicationPath = "C:\\Program Files (x86)\\Gamemaker Rich Presence\\Gamemaker RichPresence.exe"

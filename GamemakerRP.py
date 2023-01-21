@@ -10,11 +10,16 @@ from pystray import Icon as strayicon, Menu, MenuItem
 from datetime import datetime
 import win32gui
 import win32process
+from dotenv import load_dotenv
 
-VERSION = "1.0.0"
+current_dir = os.path.dirname(os.path.abspath(__file__))
+
+load_dotenv(current_dir)
+VERSION = "1.0.1"
 UPDATEURL = 'https://api.github.com/repos/Eneskp3441/GamemakerRichPresence/releases'
+GITHUB_TOKEN = os.getenv("TOKEN")
 headers = {
-    'Authorization': 'Token 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',
+    'Authorization': f"Token {GITHUB_TOKEN}",
     'Accept': 'application/vnd.github+json'
 }
 # Discord Presence
@@ -29,10 +34,9 @@ if not os.path.exists(settingsSaveFolder):
 userSettingsPath = settingsSaveFolder+"\\userSettings.json"
 
 programPath = os.path.abspath(os.getcwd())
-current_dir = os.path.dirname(os.path.abspath(__file__))
+
 programIconPath = os.path.join(current_dir, "icon.png")
-
-
+programName = "Gamemaker RichPresence.exe"
 
 def log(message):
     logs_path = os.path.join(settingsSaveFolder, 'logs')
@@ -45,7 +49,7 @@ def log(message):
     with open(log_file, 'a') as f:
         f.write(f'{datetime.now()} - {message}\n')
 
-log("Application Started!")
+log(f"Application Started! {VERSION}")
 
 def getUserSettings():
     if os.path.exists(userSettingsPath):
@@ -192,6 +196,7 @@ def checkUpdate():
             selectedData = None
             response = requests.get(UPDATEURL,headers=headers)
             data = response.json()
+            print(json.dumps(data))
             for release in data:
                 if release['tag_name'] == "Directly":
                     selectedData = release
@@ -208,7 +213,7 @@ def checkUpdate():
         except Exception as e:
             log(" #1002 Check Update Failed " + str(e))
             print("Error Check Update: ", e)
-        time.sleep(1 * 60 * 60)
+        time.sleep(.15 * 60 * 60)
     
 
 
@@ -257,84 +262,96 @@ while 1:
         time.sleep(3)
         print("Discord Not Found")
 
+try:
+    RPC.connect()
+    rpcConnected = True
+except Exception as e:
+    rpcConnected = False
+    log(" #1032 RPC Connect failed " + str(e))
 
-RPC.connect()
 projectName = ""
 lastProjectName = ""
 isStartPage = ""
 while programActive:
-    try:
-        gamemakerIsRunning = False
-        for p in psutil.process_iter(): 
-            if p.name() == "GameMaker.exe":
-                isStartPage = "Start Page" in list_windows(p.pid)
-                gamemakerIsRunning = True
-                break
-    except Exception as e:
-        print("Find window error: ", str(e))
-        gamemakerIsRunning = False
-    if gamemakerIsRunning:
-        projectFolder = ""
-        rpcData = {"state" : ""}
-        lastEditPath = ""
-        if not isStartPage:
-            with open(recentProjects, 'r') as f:
-                string = f.read()
-
-                project = string.split("\n")[0]
-                projectFolder = "\\".join(project.rsplit("\\")[:-1])
-                projectName = project.rsplit("\\")[-1][:-4]
-
-                if projectName != lastProjectName:
-                    currentTimeStamp =  time.time()
-                    lastProjectName = projectName
-
-            lastEditPath = get_latest_file(projectFolder)
-            if lastEditPath != False:
-                editingType =  lastEditPath.rsplit("\\")[-2]
-                with open(projectFolder+"\\"+projectName+".yyp", 'r') as f:
+    if rpcConnected:
+        try:
+            gamemakerIsRunning = False
+            for p in psutil.process_iter(): 
+                if p.name() == "GameMaker.exe":
+                    isStartPage = "Start Page" in list_windows(p.pid)
+                    gamemakerIsRunning = True
+                    break
+        except Exception as e:
+            print("Find window error: ", str(e))
+            gamemakerIsRunning = False
+        if gamemakerIsRunning:
+            projectFolder = ""
+            rpcData = {"state" : ""}
+            lastEditPath = ""
+            if not isStartPage:
+                with open(recentProjects, 'r') as f:
                     string = f.read()
-                    string = string[string.find("\"IDEVersion\": \"")+15:]
-                    string = string[:string.find('",')]
-                    IDEVersion = string
 
-                isVisible = True
-                
-                for i in userSettings.keys():
-                    if i.startswith("enable"):
-                        if not userSettings[i] and editingType == i.replace('enable', '').lower():
-                            isVisible = False
+                    project = string.split("\n")[0]
+                    projectFolder = "\\".join(project.rsplit("\\")[:-1])
+                    projectName = project.rsplit("\\")[-1][:-4]
+
+                    if projectName != lastProjectName:
+                        currentTimeStamp =  time.time()
+                        lastProjectName = projectName
+
+                lastEditPath = get_latest_file(projectFolder)
+                if lastEditPath != False:
+                    editingType =  lastEditPath.rsplit("\\")[-2]
+                    with open(projectFolder+"\\"+projectName+".yyp", 'r') as f:
+                        string = f.read()
+                        string = string[string.find("\"IDEVersion\": \"")+15:]
+                        string = string[:string.find('",')]
+                        IDEVersion = string
+
+                    isVisible = True
+                    
+                    for i in userSettings.keys():
+                        if i.startswith("enable"):
+                            if not userSettings[i] and editingType == i.replace('enable', '').lower():
+                                isVisible = False
 
 
-                if ( not isVisible ):
-                    rpcData["state"] = "Editing Project"
-                    if userSettings['showProjectName']: rpcData['details'] = projectName
-                    rpcData["large_image"] = "gamemaker"
-                    rpcData["large_text"] = IDEVersion
-                    if currentTimeStamp != -1: rpcData["start"] = currentTimeStamp
-                else:
-                    rpcData["state"] = "Editing " + ( lastEditPath.rsplit("\\")[-1] if userSettings['showEditingName'] else editingType[:-1])
-                    if userSettings['showProjectName']: rpcData['details'] = projectName
-                    rpcData["large_image"] = editingType
-                    rpcData["small_image"] = "gamemaker"
-                    rpcData["large_text"] = editingType[:-1]
-                    rpcData["small_text"] = IDEVersion
-                    if currentTimeStamp != -1: rpcData["start"] = currentTimeStamp
+                    if ( not isVisible ):
+                        rpcData["state"] = "Editing Project"
+                        if userSettings['showProjectName']: rpcData['details'] = projectName
+                        rpcData["large_image"] = "gamemaker"
+                        rpcData["large_text"] = IDEVersion
+                        if currentTimeStamp != -1: rpcData["start"] = currentTimeStamp
+                    else:
+                        rpcData["state"] = "Editing " + ( lastEditPath.rsplit("\\")[-1] if userSettings['showEditingName'] else editingType[:-1])
+                        if userSettings['showProjectName']: rpcData['details'] = projectName
+                        rpcData["large_image"] = editingType
+                        rpcData["small_image"] = "gamemaker"
+                        rpcData["large_text"] = editingType[:-1]
+                        rpcData["small_text"] = IDEVersion
+                        if currentTimeStamp != -1: rpcData["start"] = currentTimeStamp
+            else:
+                rpcData["state"] = "Selecting Project.."
+                rpcData["details"] = "Start Page"
+                rpcData["large_image"] = "gamemaker"
+
+            try:RPC.update(**rpcData)
+            except Exception as e:
+                log(" #1004 RPC Update failed " + str(e))
         else:
-            rpcData["state"] = "Selecting Project.."
-            rpcData["details"] = "Start Page"
-            rpcData["large_image"] = "gamemaker"
-
-        try:RPC.update(**rpcData)
-        except Exception as e:
-            log(" #1004 RPC Update failed " + str(e))
+            lastProjectName = ""
+            currentTimeStamp = -1
+            try:RPC.clear()
+            except Exception as e:
+                log(" #1006 Rich Presence Clear Failed " + str(e))
     else:
-        lastProjectName = ""
-        currentTimeStamp = -1
-        try:RPC.clear()
+        try:
+            RPC.connect()
+            rpcConnected = True
         except Exception as e:
-            log(" #1006 Rich Presence Clear Failed " + str(e))
-    
+            rpcConnected = False
+            log(" #1032 RPC Connect failed " + str(e))
     
     time.sleep(15)
    
